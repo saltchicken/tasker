@@ -31,7 +31,7 @@ class Tasker(QApplication):
         response = self.mic.start_recording()
         transcription = self.transcriber.transcribe(response)
         transcription_words = transcription.split(" ")
-        self.screen.write(transcription)
+        self.screen.write(transcription, 5)
 
     def quit_app(self):
         self.tray_icon.hide()
