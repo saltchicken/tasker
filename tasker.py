@@ -3,6 +3,7 @@ from transcriber import Transcriber
 from screen_writer import write_to_screen
 import sys
 from PyQt5.QtWidgets import QApplication, QMenu, QAction, QSystemTrayIcon, QStyle
+from PyQt5.QtCore import QTimer
 
 class Tasker(QApplication):
     def __init__(self, sys_argv):
@@ -16,8 +17,13 @@ class Tasker(QApplication):
         
         self.quit_action = QAction("Quit", self)
         self.quit_action.triggered.connect(self.quit_app)
+        
+        self.checkbox_action = QAction('Enabled', self)
+        self.checkbox_action.setCheckable(True)
+        self.checkbox_action.triggered.connect(self.toggle_checkbox)
 
         self.tray_menu = QMenu()
+        self.tray_menu.addAction(self.checkbox_action)
         self.tray_menu.addAction(self.get_speech_action)
         self.tray_menu.addAction(self.quit_action)
 
@@ -31,7 +37,18 @@ class Tasker(QApplication):
         response = self.mic.start_recording()
         transcription = self.transcriber.transcribe(response)
         transcription_words = transcription.split(" ")
+        self.screen.clear()
         self.screen.write(transcription, 5)
+        
+    def toggle_checkbox(self):
+        checked = self.checkbox_action.isChecked()
+        # Perform actions based on checkbox state
+        if checked:
+            self.get_speech()
+            # TODO Test if delay is necessary
+            QTimer.singleShot(1000, self.toggle_checkbox)
+        else:
+            print('Going to sleep')
 
     def quit_app(self):
         self.tray_icon.hide()
