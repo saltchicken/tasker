@@ -1,5 +1,7 @@
 import sys
 from tasker import Tasker
 
-app = Tasker(sys.argv)
-sys.exit(app.exec_())
+if __name__ == '__main__':
+    print('Running Tasker')
+    app = Tasker(sys.argv)
+    sys.exit(app.exec_())
