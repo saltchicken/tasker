@@ -5,7 +5,7 @@ import setuptools
 
 setuptools.setup(
     name='tasker',
-    version='0.0.2',
+    version='0.0.3',
     author='John Eicher',
     author_email='john.eicher89@gmail.com',
     description='Testing installation of Package',

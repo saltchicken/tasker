@@ -1,9 +1,31 @@
+import typing
 from vad_logger import VAD_Logger
 from transcriber import Transcriber
 from screen_writer import write_to_screen
 import sys
 from PyQt5.QtWidgets import QApplication, QMenu, QAction, QSystemTrayIcon, QStyle
 from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
+
+class Worker(QObject):
+    finished = pyqtSignal()
+    def __init__(self, transcriber, mic, screen):
+        super(Worker, self).__init__()
+        self.transcriber = transcriber
+        self.mic = mic
+        self.screen = screen
+        self.running = True
+
+    # TODO Fix janky solution. Need to quit mic.start_recording() somehow through signal
+    def run(self):
+        if self.running:
+            response = self.mic.start_recording()
+            if self.running:
+                transcription = self.transcriber.transcribe(response)
+                transcription_words = transcription.split(" ")
+                self.screen.clear()
+                self.screen.write(transcription, 5)
+            self.finished.emit()
 
 class Tasker(QApplication):
     def __init__(self, sys_argv):
@@ -32,6 +54,8 @@ class Tasker(QApplication):
         self.tray_icon.setToolTip("Tasker")
         self.tray_icon.setContextMenu(self.tray_menu)
         self.tray_icon.show()
+        
+        self.thread = None   
 
     def get_speech(self):
         response = self.mic.start_recording()
@@ -44,11 +68,19 @@ class Tasker(QApplication):
         checked = self.checkbox_action.isChecked()
         # Perform actions based on checkbox state
         if checked:
-            self.get_speech()
-            # TODO Test if delay is necessary
-            QTimer.singleShot(1000, self.toggle_checkbox)
+            self.thread = QThread()
+            self.worker = Worker(self.transcriber, self.mic, self.screen)
+            self.worker.moveToThread(self.thread)
+            self.thread.started.connect(self.worker.run)
+            self.worker.finished.connect(self.worker.run)
+            # self.worker.finished.connect(self.worker.deleteLater)
+            # self.thread.finished.connect(self.thread.deleteLater)
+            # Step 6: Start the thread
+            self.thread.start()
         else:
-            print('Going to sleep')
+            if self.thread:
+                self.worker.running = False
+                self.thread.quit()
 
     def quit_app(self):
         self.tray_icon.hide()
