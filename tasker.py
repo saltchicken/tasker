@@ -8,24 +8,19 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 class Worker(QObject):
-    finished = pyqtSignal()
-    def __init__(self, transcriber, mic, screen):
+    finished = pyqtSignal(str)
+    def __init__(self, transcriber, mic):
         super(Worker, self).__init__()
         self.transcriber = transcriber
         self.mic = mic
-        self.screen = screen
         self.running = True
 
     # TODO Fix janky solution. Need to quit mic.start_recording() somehow through signal
     def run(self):
         if self.running:
             response = self.mic.start_recording()
-            if self.running:
-                transcription = self.transcriber.transcribe(response)
-                transcription_words = transcription.split(" ")
-                self.screen.clear()
-                self.screen.write(transcription, 5)
-            self.finished.emit()
+            transcription = self.transcriber.transcribe(response)
+            self.finished.emit(transcription)
 
 class Tasker(QApplication):
     def __init__(self, sys_argv):
@@ -57,6 +52,11 @@ class Tasker(QApplication):
         
         self.thread = None   
 
+    def transcriber_callback(self, transcription):
+        transcription_words = transcription.split(" ")
+        self.screen.clear()
+        self.screen.write(transcription, 5)
+        
     def get_speech(self):
         response = self.mic.start_recording()
         transcription = self.transcriber.transcribe(response)
@@ -69,13 +69,13 @@ class Tasker(QApplication):
         # Perform actions based on checkbox state
         if checked:
             self.thread = QThread()
-            self.worker = Worker(self.transcriber, self.mic, self.screen)
+            self.worker = Worker(self.transcriber, self.mic)
             self.worker.moveToThread(self.thread)
             self.thread.started.connect(self.worker.run)
+            self.worker.finished.connect(self.transcriber_callback)
             self.worker.finished.connect(self.worker.run)
             # self.worker.finished.connect(self.worker.deleteLater)
             # self.thread.finished.connect(self.thread.deleteLater)
-            # Step 6: Start the thread
             self.thread.start()
         else:
             if self.thread:
@@ -85,7 +85,7 @@ class Tasker(QApplication):
     def quit_app(self):
         self.tray_icon.hide()
         self.quit()
-
+        
 if __name__ == "__main__":
     app = Tasker(sys.argv)
     sys.exit(app.exec_())
