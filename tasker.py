@@ -53,16 +53,13 @@ class Tasker(QApplication):
         self.thread = None   
 
     def transcriber_callback(self, transcription):
-        transcription_words = transcription.split(" ")
         self.screen.clear()
         self.screen.write(transcription, 5)
         
     def get_speech(self):
         response = self.mic.start_recording()
         transcription = self.transcriber.transcribe(response)
-        transcription_words = transcription.split(" ")
-        self.screen.clear()
-        self.screen.write(transcription, 5)
+        self.transcriber_callback(transcription)
         
     def toggle_checkbox(self):
         checked = self.checkbox_action.isChecked()
