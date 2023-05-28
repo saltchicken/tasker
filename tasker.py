@@ -1,4 +1,4 @@
-import typing
+import typing, time
 from vad_logger import VAD_Logger
 from transcriber import Transcriber
 from screen_writer import write_to_screen
@@ -18,9 +18,18 @@ class Worker(QObject):
     # TODO Fix janky solution. Need to quit mic.start_recording() somehow through signal
     def run(self):
         if self.running:
+            print('Worker running')
             response = self.mic.start_recording()
             transcription = self.transcriber.transcribe(response)
+            # TODO This needs to be controlled by transcriber_callback
+            self.running = False
             self.finished.emit(transcription)
+            self.run()
+        else:
+            # TODO Remove this else statenment. transcriber_callback should emit and run this function again
+            print('Worker sleeping')
+            time.sleep(.5)
+            self.run()
 
 class Tasker(QApplication):
     def __init__(self, sys_argv):
@@ -50,11 +59,15 @@ class Tasker(QApplication):
         self.tray_icon.setContextMenu(self.tray_menu)
         self.tray_icon.show()
         
-        self.thread = None   
+        self.thread = None
+        self.worker = None
 
     def transcriber_callback(self, transcription):
         self.screen.clear()
         self.screen.write(transcription, 5)
+        # TODO This shouldn't be necessary. One shot needs self.work declared.
+        if self.worker:
+            self.worker.running = True
         
     def get_speech(self):
         response = self.mic.start_recording()
@@ -70,7 +83,6 @@ class Tasker(QApplication):
             self.worker.moveToThread(self.thread)
             self.thread.started.connect(self.worker.run)
             self.worker.finished.connect(self.transcriber_callback)
-            self.worker.finished.connect(self.worker.run)
             # self.worker.finished.connect(self.worker.deleteLater)
             # self.thread.finished.connect(self.thread.deleteLater)
             self.thread.start()
