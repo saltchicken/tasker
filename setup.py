@@ -5,7 +5,7 @@ import setuptools
 
 setuptools.setup(
     name='tasker',
-    version='0.0.4',
+    version='0.0.5',
     author='John Eicher',
     author_email='john.eicher89@gmail.com',
     description='Testing installation of Package',
@@ -17,6 +17,8 @@ setuptools.setup(
     # },
     # license='MIT',
     py_modules=['tasker'],
-    install_requires=['pyqt5',
-                     'screen_writer @ git+https://github.com/saltchicken/screen_writer.git@master#egg=screen_writer'],
+    install_requires=['pyqt5', 'torch', 'torchvision', 'torchaudio',
+                     'screen_writer @ git+https://github.com/saltchicken/screen_writer.git@master#egg=screen_writer',
+                     'vad_logger @ git+https://github.com/saltchicken/vad_logger.git@master#egg=vad_logger',
+                     'transcriber @ git+https://github.com/saltchicken/transcriber.git@master#egg=transcriber'],
 )
