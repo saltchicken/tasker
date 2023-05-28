@@ -5,7 +5,7 @@ import setuptools
 
 setuptools.setup(
     name='tasker',
-    version='0.0.3',
+    version='0.0.4',
     author='John Eicher',
     author_email='john.eicher89@gmail.com',
     description='Testing installation of Package',
@@ -17,5 +17,6 @@ setuptools.setup(
     # },
     # license='MIT',
     py_modules=['tasker'],
-    install_requires=['pyqt5'],
+    install_requires=['pyqt5',
+                     'screen_writer @ git+https://github.com/saltchicken/screen_writer.git@master#egg=screen_writer'],
 )
