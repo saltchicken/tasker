@@ -21,13 +21,11 @@ class Worker(QObject):
     def __init__(self, transcriber, mic, checkbox_action):
         super(Worker, self).__init__()
         self.checkbox_action = checkbox_action
-        print('Initializing Worker')
         self.transcriber = transcriber
         self.mic = mic
 
     def run(self):
         while True:
-            logger.debug('Worker running')
             response = self.mic.start_recording()
             if response:
                 transcription = self.transcriber.transcribe(response)
@@ -35,7 +33,6 @@ class Worker(QObject):
                 if not self.checkbox_action.isChecked():
                     break
             else:
-                logger.debug('Worker quit from no respponse')
                 break
                 
 
