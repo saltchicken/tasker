@@ -1,5 +1,5 @@
 import typing, time
-from vad_logger import VAD_Logger
+from vad_logger import VAD_Logger # type: ignore
 from transcriber import Transcriber
 from screen_writer import write_to_screen
 import sys
@@ -18,33 +18,28 @@ logger.addHandler(handler)
 
 class Worker(QObject):
     finished = pyqtSignal(str)
-    def __init__(self, transcriber, mic):
+    def __init__(self, transcriber, mic, checkbox_action):
         super(Worker, self).__init__()
+        self.checkbox_action = checkbox_action
+        print('Initializing Worker')
         self.transcriber = transcriber
         self.mic = mic
         self.running = True
         self.quit = False
 
-    # TODO Fix janky solution. Need to quit mic.start_recording() somehow through signal
     def run(self):
-        # TODO: Fixed by sending signal through begin_recording()
-        if self.running:
+        while True:
             logger.debug('Worker running')
             response = self.mic.start_recording()
-            if self.quit == False:
+            if response:
                 transcription = self.transcriber.transcribe(response)
-                # TODO This needs to be controlled by transcriber_callback
-                self.running = False
                 self.finished.emit(transcription)
-            self.run()
-        else:
-            # TODO Remove this else statenment. transcriber_callback should emit and run this function again
-            logger.debug('Worker sleeping')
-            time.sleep(.5)
-            if self.quit == False:
-                self.run()
+                if not self.checkbox_action.isChecked():
+                    break
             else:
-                logger.debug('Worker quit')
+                logger.debug('Worker quit from no respponse')
+                break
+                
 
 class Tasker(QApplication):
     def __init__(self, sys_argv):
@@ -74,7 +69,8 @@ class Tasker(QApplication):
         self.tray_icon.setContextMenu(self.tray_menu)
         self.tray_icon.show()
         
-        self.thread = None
+        # TODO This shouldn't be necessary. isRunning() called before first thread
+        self.thread = QThread()
         self.worker = None
 
     def transcriber_callback(self, transcription):
@@ -85,27 +81,35 @@ class Tasker(QApplication):
             self.worker.running = True
         
     def get_speech(self):
-        response = self.mic.start_recording()
-        transcription = self.transcriber.transcribe(response)
-        self.transcriber_callback(transcription)
+        self.start_worker()
+        
+    def start_worker(self):
+        if self.thread.isRunning():
+            self.thread.quit()
+            self.thread.wait()
+        self.mic.stop_condition = False
+        self.thread = QThread()
+        self.worker = Worker(self.transcriber, self.mic, self.checkbox_action)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.transcriber_callback)
+        # self.worker.finished.connect(self.worker.deleteLater)
+        # self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+        
         
     def toggle_checkbox(self):
         checked = self.checkbox_action.isChecked()
         # Perform actions based on checkbox state
         if checked:
-            self.thread = QThread()
-            self.worker = Worker(self.transcriber, self.mic)
-            self.worker.moveToThread(self.thread)
-            self.thread.started.connect(self.worker.run)
-            self.worker.finished.connect(self.transcriber_callback)
-            # self.worker.finished.connect(self.worker.deleteLater)
-            # self.thread.finished.connect(self.thread.deleteLater)
-            self.thread.start()
+            self.start_worker()
         else:
             if self.thread:
+                self.mic.stop_condition = True
                 self.worker.running = False
                 self.worker.quit = True
                 self.thread.quit()
+                self.thread.wait()
 
     def quit_app(self):
         self.tray_icon.hide()
