@@ -7,6 +7,15 @@ from PyQt5.QtWidgets import QApplication, QMenu, QAction, QSystemTrayIcon, QStyl
 from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 class Worker(QObject):
     finished = pyqtSignal(str)
     def __init__(self, transcriber, mic):
@@ -14,22 +23,28 @@ class Worker(QObject):
         self.transcriber = transcriber
         self.mic = mic
         self.running = True
+        self.quit = False
 
     # TODO Fix janky solution. Need to quit mic.start_recording() somehow through signal
     def run(self):
+        # TODO: Fixed by sending signal through begin_recording()
         if self.running:
-            print('Worker running')
+            logger.debug('Worker running')
             response = self.mic.start_recording()
-            transcription = self.transcriber.transcribe(response)
-            # TODO This needs to be controlled by transcriber_callback
-            self.running = False
-            self.finished.emit(transcription)
+            if self.quit == False:
+                transcription = self.transcriber.transcribe(response)
+                # TODO This needs to be controlled by transcriber_callback
+                self.running = False
+                self.finished.emit(transcription)
             self.run()
         else:
             # TODO Remove this else statenment. transcriber_callback should emit and run this function again
-            print('Worker sleeping')
+            logger.debug('Worker sleeping')
             time.sleep(.5)
-            self.run()
+            if self.quit == False:
+                self.run()
+            else:
+                logger.debug('Worker quit')
 
 class Tasker(QApplication):
     def __init__(self, sys_argv):
@@ -89,6 +104,7 @@ class Tasker(QApplication):
         else:
             if self.thread:
                 self.worker.running = False
+                self.worker.quit = True
                 self.thread.quit()
 
     def quit_app(self):
