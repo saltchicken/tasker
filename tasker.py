@@ -24,8 +24,6 @@ class Worker(QObject):
         print('Initializing Worker')
         self.transcriber = transcriber
         self.mic = mic
-        self.running = True
-        self.quit = False
 
     def run(self):
         while True:
@@ -76,9 +74,6 @@ class Tasker(QApplication):
     def transcriber_callback(self, transcription):
         self.screen.clear()
         self.screen.write(transcription, 5)
-        # TODO This shouldn't be necessary. One shot needs self.work declared.
-        if self.worker:
-            self.worker.running = True
         
     def get_speech(self):
         self.start_worker()
@@ -97,7 +92,11 @@ class Tasker(QApplication):
         # self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
         
-        
+    def stop_worker(self):
+        self.mic.stop_condition = True
+        self.thread.quit()
+        self.thread.wait()
+           
     def toggle_checkbox(self):
         checked = self.checkbox_action.isChecked()
         # Perform actions based on checkbox state
@@ -105,11 +104,7 @@ class Tasker(QApplication):
             self.start_worker()
         else:
             if self.thread:
-                self.mic.stop_condition = True
-                self.worker.running = False
-                self.worker.quit = True
-                self.thread.quit()
-                self.thread.wait()
+                self.stop_worker()
 
     def quit_app(self):
         self.tray_icon.hide()
