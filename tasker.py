@@ -3,8 +3,9 @@ from vad_logger import VAD_Logger # type: ignore
 from transcriber import Transcriber
 from screen_writer import write_to_screen
 import sys
-from PyQt5.QtWidgets import QApplication, QMenu, QAction, QSystemTrayIcon, QStyle
-from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import QApplication, QMenu, QAction, QSystemTrayIcon
+from PyQt5.QtGui import QIcon
+
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 import logging
@@ -59,7 +60,8 @@ class Tasker(QApplication):
         self.tray_menu.addAction(self.quit_action)
 
         self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        # self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        self.tray_icon.setIcon(QIcon('tasker_systray.png'))
         self.tray_icon.setToolTip("Tasker")
         self.tray_icon.setContextMenu(self.tray_menu)
         self.tray_icon.show()
