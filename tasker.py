@@ -100,8 +100,10 @@ class Tasker(QApplication):
         checked = self.checkbox_action.isChecked()
         # Perform actions based on checkbox state
         if checked:
+            self.get_speech_action.setEnabled(False)
             self.start_worker()
         else:
+            self.get_speech_action.setEnabled(True)
             if self.thread:
                 self.stop_worker()
 
